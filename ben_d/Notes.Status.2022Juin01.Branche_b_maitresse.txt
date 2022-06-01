@@ -1,0 +1,76 @@
+En date du 2022 juin 6, avant le synchro avec cloudconnect.
+
+1.1 LWQTT branch et compile
+
+2.0 Installation de mosquitto server sur test001
+
+
+/******************************************************************************
+    1.1 LWQTT branch et compile
+ ******************************************************************************/
+
+
+dans le répertoire lwmqtt
+
+masseb@bm002:/data/simul/lwmqtt/256dpi/lwmqtt$ git branch
+  b/base_benoit_test_v0.6.4
+  b/benoit_test_v0.6.4
+  b/cloudconnect_ap_pr001
+  b/cloudconnect_openssl_ap
+* b/maitresse
+  b/mosquitto_test_preliminaire
+  b/sync_ap
+  b/test_socket_opensll-autonome
+  b/testavec1883
+  master
+
+
+ masseb@bm002:/data/simul/lwmqtt/256dpi/lwmqtt$ git log --oneline 
+1e0854a (HEAD -> b/maitresse, origin/b/maitresse, origin/b/cloudconnect_ap_pr001, b/cloudconnect_ap_pr001) Esthétique et quelques changements mineures
+b26b699 Passe 2 de l'optimisation du code
+962983f Passe 1 de l'optimisation du code certificat veriry...
+e42f755 Bogue: Correction des varialbes pour valider le certificat
+312d535 Remove useless debug
+1761bee Sync avec code qui fonctionne sur AP 
+
+make clean 
+
+
+/******************************************************************************
+    2.0 Installation de mosquitto server sur test001
+ ******************************************************************************/
+
+Installation de mosquitto server sur test001
+
+masseb@masseb-test001:/var/snap/mosquitto$ sudo systemctl status snap.mosquitto.mosquitto.service
+[sudo] password for masseb: 
+● snap.mosquitto.mosquitto.service - Service for snap application mosquitto.mosquitto
+     Loaded: loaded (/etc/systemd/system/snap.mosquitto.mosquitto.service; enabled; vendor preset: enabled)
+     Active: active (running) since Wed 2022-06-01 11:31:39 EDT; 1h 16min ago
+   Main PID: 852 (launcher.sh)
+      Tasks: 2 (limit: 9320)
+     Memory: 24.2M
+     CGroup: /system.slice/snap.mosquitto.mosquitto.service
+             ├─ 852 /bin/sh /snap/mosquitto/704/launcher.sh
+             └─1072 /snap/mosquitto/704/usr/sbin/mosquitto -c /var/snap/mosquitto/common/mosquitto.conf
+
+Jun 01 11:31:39 masseb-test001 systemd[1]: Started Service for snap application mosquitto.mosquitto.
+Jun 01 11:32:00 masseb-test001 mosquitto.mosquitto[852]: Found config in /var/snap/mosquitto/common/mosquitto.conf
+masseb@masseb-test001:/var/snap/mosquitto$ sudo systemctl stop snap.mosquitto.mosquitto.service
+masseb@masseb-test001:/var/snap/mosquitto$ sudo systemctl restart snap.mosquitto.mosquitto.service
+[sudo] password for masseb: 
+masseb@masseb-test001:/var/snap/mosquitto$ sudo systemctl stop snap.mosquitto.mosquitto.service
+masseb@masseb-test001:/var/snap/mosquitto$ sudo systemctl restart snap.mosquitto.mosquitto.service
+masseb@masseb-test001:/var/snap/mosquitto$ 
+
+
+Fichier log file 
+/var/snap/mosquitto/common/mosquitto.benoit.log
+
+
+/******************************************************************************
+    3.0 Test
+ ******************************************************************************/
+
+./ben
+

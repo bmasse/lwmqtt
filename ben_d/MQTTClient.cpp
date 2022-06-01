@@ -1,43 +1,32 @@
-#include <stdio.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <pthread.h>
-#include <ctype.h>
-#include <unistd.h>
-#include <errno.h>
-#include <time.h>
-#include <sys/time.h>
+#include <iostream>
+#include <fstream>
+#include <cassert>
+#include <algorithm>
+#include <chrono>
+#include <cstdarg>
 #include <sys/socket.h>
-#include <sys/vfs.h>
 #include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/wait.h>
-#include <linux/rtc.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/file.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <sys/mman.h>
-#include <assert.h>
-#include <dirent.h>
-#include <libgen.h>
-#include <linux/i2c-dev.h>
-#include <sys/sem.h>
-#include <sys/ipc.h>
-#include <sys/syscall.h> 
 
-#include "Socket.h"
-#include "config.h"
+#include <zlib.h>
+#include <curl/curl.h>
+#include <cpr/cpr.h>
+#if AP
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+
+#include <aruba/util/grouplog_cloudconnect.h>
+#include <aruba/util/eventlog.h>
 extern "C" {
-#include <lwmqtt.h>
-#include <lwmqtt/unix.h>
+#include <aruba/util/util.h>
+#include <aruba/util/ipv6_cmn.h>
 }
 
-#include <iostream>
-using namespace std;
-#include <cpr/cpr.h>
+#include <gsm_fields_set.h>
+
+#include <cloud_message.pb.h>
+#endif // #if AP
+
+#include "config.h"
 
 extern int
 getSysUptime(void)
@@ -61,7 +50,6 @@ getSysUptime(void)
 
 
 #include "MQTTClient.h"
-
 
 /**
  * @brief MQTT keepalive interval.
@@ -132,7 +120,7 @@ void lwmqtt_message_callback_c_wrapper(lwmqtt_client_t *client, void *ref, lwmqt
     auto& callback = *reinterpret_cast<lwmqttMessageCallbackFunc*>(ref);
     callback(client, NULL, topic, msg);
 }
-#if NOUV
+#if AP
 static bool isCloudSessionSequenceValid(const std::string &cloudSessionSequence)
 {
     if (cloudSessionSequence.empty()) {
@@ -144,7 +132,7 @@ static bool isCloudSessionSequenceValid(const std::string &cloudSessionSequence)
             cloudSessionSequence.end(),
             [](unsigned char c) { return !std::isdigit(c); }) == cloudSessionSequence.end();
 }
-#endif // if NOUV
+#endif // #if AP
 
 MQTTClient::MQTTClient(string mqttHost,
                        int mqttHostPort,
@@ -158,25 +146,53 @@ MQTTClient::MQTTClient(string mqttHost,
                        OnMessageCallbackPtr onMessageCallback)
 {
     mStarted = false;
+    mLastConnectionSMCall = 0;
     mCloudSessionSequence = 0;
     mOnboardingCaCertPath = onboardingCaCertPath;
     mOnConnectCallback = onConnectCallback;
     mOnDisconnectCallback = onDisconnectCallback;
     mOnMessageCallback = onMessageCallback;
 
+#if AP
+    // Initialize connection information.
+    memset(&mConnectionInfo, 0, sizeof(mConnectionInfo));
+#endif // #if AP
     GLINFO_MQTTCLIENT("MQTTClient +++-------------------------------");
     GLINFO_MQTTCLIENT("%s, %d, %d, %s, %s, %s", mqttHost.c_str(), mqttHostPort, validateMqttHostCert, deviceCertPath.c_str(), deviceKeyPath.c_str(), caCertPath.c_str());
 
     memset((char*)&mConnectionInfo, 0, sizeof(mConnectionInfo));  // Benoit j'avais commenté pourquoi ? A cause de l'erreur de pointeur
+
     mConnectionInfo.mState.mState = MQTTConnectionInfo::State::INACTIVE;
     mConnectionInfo.mState.mUptime = getSysUptime();
-
+    mConnectionInfo.mBrokerHostname = mqttHost;
+    // IMPORTANT: Benoit Donnees prises dans le AP11D
     mDeviceID = "20:4c:03:90:e0:56";  // Mon AP11D
     mPublishTopicBase = "DevStackSSO/";
     mPublishTopicBase += "pm/" + mDeviceID + "/v2/";
 
-    // IMPORTANT: Benoit Donnees prises dans le AP11D
 #if AP
+    {
+        gsm_result_t result;
+        gsm_channel_cloudconnect_key_t key;
+        gsm_section_cloudconnect_mqtt_connection_struct_t obj;
+
+        GSM_CHANNEL_CLOUDCONNECT_KEY_DEFAULT_INIT(&key);
+
+        result = gsm_section_lookup(GSM_CHANNEL_CLOUDCONNECT,
+            GSM_SECTION_MQTT_CONNECTION,
+            &key,
+            sizeof(obj),
+            &obj);
+        if (result == GSM_RESULT_SUCCESS) {
+            mConnectionInfo.mDisconnects = obj.num_disconnections;
+        }
+        else if (result != GSM_RESULT_ERROR_HTBL_KEY_NOT_FOUND) {
+            GLERROR_MQTTCLIENT("Failed to get MQTT connection info from GSM: %s (%d).",
+                    gsm_result_names[result],
+                    result);
+        }
+    }
+
     // Get device info.
     gsm_channel_device_info_key_t device_info_key;
     gsm_channel_onboarding_key_t onboarding_key;
@@ -344,6 +360,15 @@ MQTTClient::~MQTTClient()
 
 void MQTTClient::ConnectionSMTimerCallback(ev::timer &watcher, int revents)
 {
+    // We are called every second, but we check that we don't run more often
+    // than every MQTT_CONNECTION_SM_TIMER_PERIOD_SECS seconds.  Because we have
+    // network related calls that can block for few seconds, using this method
+    // ensure that the MQTT_CONNECTION_SM_TIMER_PERIOD_SECS period starts after
+    // these calls and not before.
+    if (getSysUptime() - mLastConnectionSMCall < MQTT_CONNECTION_SM_TIMER_PERIOD_SECS) {
+        return;
+    }
+
     MQTTConnectionInfo::State origState = mConnectionInfo.mState.mState;
     GLINFO_MQTTCLIENT("MQTTClient ConnectionSMTimerCallback +++-------------------------------");
 
@@ -368,6 +393,7 @@ void MQTTClient::ConnectionSMTimerCallback(ev::timer &watcher, int revents)
      */
     if (mConnectionInfo.mState.mState == MQTTConnectionInfo::State::GETTING_CLOUD_SESSION_SEQUENCE) {
         std::cout << "(mConnectionInfo.mState.mState == MQTTConnectionInfo::State::GETTING_CLOUD_SESSION_SEQUENCE)\n"; 
+#if AP
         if (0) {
         static unsigned int numTries = 0;
         mCloudSessionSequence = 0;
@@ -442,7 +468,7 @@ void MQTTClient::ConnectionSMTimerCallback(ev::timer &watcher, int revents)
         }
         else if (numTries == MAX_CLOUD_SESSION_SEQUENCE_FETCH_TRIES) {
             // Give up.
-            printf("Could not fetch cloud session sequence, giving up.\n");
+            GLERROR_MQTTCLIENT("Could not fetch cloud session sequence, giving up. numTries = %d", numTries);
             UpdateConnectionState(MQTTConnectionInfo::State::CONNECTING_TO_BROKER);
             numTries = 0;
         }
@@ -450,7 +476,8 @@ void MQTTClient::ConnectionSMTimerCallback(ev::timer &watcher, int revents)
             TriggerDisconnect(rc);
         }
         }
-        else
+		else
+#endif // #if AP		
         {
             GLDEBUG_MQTTCLIENT("Cloud session sequence fetched successfully: %lu", mCloudSessionSequence);
             UpdateConnectionState(MQTTConnectionInfo::State::CONNECTING_TO_BROKER);
@@ -1311,7 +1338,9 @@ void MQTTClient::Start()
     BLog("MQTT Start time mConnectionSMTimer");
     if (!mStarted) {
         mStarted = true;
-        mConnectionSMTimer.start(0.0, MQTT_CONNECTION_SM_TIMER_PERIOD_SECS);
+        // Invoke the callback every second.  The callback takes care of
+        // handling the MQTT_CONNECTION_SM_TIMER_PERIOD_SECS period.
+        mConnectionSMTimer.start(0.0, 1.0);
     }
 }
 
@@ -1407,7 +1436,34 @@ void MQTTClient::UpdateConnectionState(MQTTConnectionInfo::State state, const lw
 
     bool connecting = (state == MQTTConnectionInfo::State::CONNECTED && state != prevState);
     bool disconnecting = (state == MQTTConnectionInfo::State::DISCONNECTED && prevState == MQTTConnectionInfo::State::CONNECTED);
-
+#if AP
+    // Generate required events.
+    if (connecting) {
+        // Generate the CLOUD_CONNECTION_ESTABLISHED event.
+        evlog_ev_cloud_connection_established(
+                mConnectionInfo.mBrokerHostname.c_str(),
+                mConnectionInfo.mBrokerIpAddr,
+                mConnectionInfo.mState.mRetries + 1);
+    }
+    else if (disconnecting) {
+        uint32_t now = getSysUptime();
+        // Generate the CLOUD_CONNECTION_LOST event.
+        evlog_ev_cloud_connection_lost(
+                mConnectionInfo.mBrokerHostname.c_str(),
+                mConnectionInfo.mBrokerIpAddr,
+                mConnectionInfo.mDisconnects + 1,
+                now - mConnectionInfo.mCurrentConnectionUptime,
+                lwmqtt_strerr(code));
+    }
+    else if (state == MQTTConnectionInfo::State::DISCONNECTED && prevState != MQTTConnectionInfo::State::INACTIVE) {
+        // Generate the CLOUD_CONNECTION_ATTEMPT_FAILURE event.
+        evlog_ev_cloud_connection_attempt_failure(
+                mConnectionInfo.mBrokerHostname.c_str(),
+                mConnectionInfo.mBrokerIpAddr,
+                mConnectionInfo.mState.mRetries + 1,
+                lwmqtt_strerr(code));
+    }
+#endif // #if AP
     mConnectionInfo.mState.mState = state;
     mConnectionInfo.mState.mCode = code;
 
@@ -1451,7 +1507,7 @@ void MQTTClient::UpdateBrokerIpAddr(int fd)
         }
     }
     else {
-        printf("Failed to get IP address of the MQTT broker.");
+        GLERROR_MQTTCLIENT("Failed to get IP address of the MQTT broker.");
         return;
     }
 }

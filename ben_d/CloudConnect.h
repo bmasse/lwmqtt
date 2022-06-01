@@ -53,6 +53,8 @@ class CloudConnect {
          * @param[in] onboardingCACertPath Path to the location of the CA
          *                                 certificate used to connect to the
          *                                 onboarding service.
+         * @param[in] websocketServerPort Port the WebSocket server listens on.
+         * @param[in] syslogServerPort Port the syslog server listens on.
          * @param[in] forceMqttConnStart Decide if the MQTT connection should
          *                               be started immediately, instead of
          *                               waiting for WebSocket clients to
@@ -105,6 +107,7 @@ class CloudConnect {
         #endif 
 
 #if AP
+        /** @brief Syslog server instance. */
         SyslogServer mSyslogServer;
 #endif // #if AP
         /**
@@ -119,6 +122,9 @@ class CloudConnect {
 
         /** @brief Timer used to schedule the reset of all connections. */
         ev::timer mResetAllConnectionsTimer;
+
+        /** @brief Signal used to force a reconnection of MQTT. */
+        ev::sig mSignalReconnectWatcher;
 
         /**
          * @brief Callback invoked when it's time to reset connections.
@@ -182,6 +188,10 @@ class CloudConnect {
          */
         void HandleWsClientMessage(int connectionID, const string& protocol, const vector<byte>& message);
 #endif // #if AP
+        /**
+         * @brief Handle received signal.
+         */
+        void HandleSignalCallback(ev::sig &signal, int revents);
 };
 
 #endif /* __CLOUD_CONNECT_H__ */

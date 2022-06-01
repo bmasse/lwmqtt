@@ -2,7 +2,7 @@
 #define __MQTTClientOpenSSL_h__
 
 #include "MQTTClient.h"
-#include "SSLConnection.h"
+#include "OpenSSL_API.h"
 #include "Socket.h"
 
 /**
@@ -28,7 +28,7 @@ public:
 protected:
 private:
     Socket mSock;
-    TLS mTls;
+    OpenSSL_API mTls;
     TlsData_S mTlsData;
 
     /**

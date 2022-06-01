@@ -6,23 +6,31 @@
 #include <vector>
 #include <utility>
 #include <chrono>
-#include <sys/socket.h>
-#include <netinet/in.h>
+#if AP
+#include <climits>
+#endif // #if AP
+
+#include <ev++.h>
+
+#if AP
+#include <gsm_schema.h>
+#include <gsm_apps.h>
+#endif // #if AP
+
 using std::string;
 using std::vector;
 
-#include "Socket.h"
-
 typedef uint8_t byte;
 
-#include "mosq.h"
-extern "C" {
-#include <lwmqtt.h>
-#include <lwmqtt/unix.h>
-}
 
-#include "SSLConnection.h"
-#include <ev++.h>
+extern "C" {
+#include <lwmqtt.h> 
+}
+#include "lwmqtt_unix_timer.h"
+
+#include "mosq.h"
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 /**
  * @brief Maximum number of times we try to get the cloud session sequence
@@ -129,6 +137,7 @@ struct MQTTConnectionInfo
     uint32_t mDisconnects; /* Number of time we lost the MQTT connection. */
     int mLastDisconnectionError; /* Error code associated to the last MQTT disconnection. */
     string mLastDisconnectionErrorStr; /* Description of the error code associated to the last MQTT disconnection. */
+    string mBrokerHostname; /* Hostname of the MQTT broker. */
     in_addr_t mBrokerIpAddr; /* IP address of the MQTT broker. */
 };
 
@@ -265,9 +274,12 @@ class MQTTClient {
         /** @brief Indicate if we are started or not. */
         bool mStarted;
 
+        /** @brief Last time the connection state machine has been called. */
+        uint32_t mLastConnectionSMCall;
+#if AP
         /** @brief Device information. */
-        //gsm_channel_device_info_struct_t mDeviceInfo;
-
+        gsm_channel_device_info_struct_t mDeviceInfo;
+#endif // #if AP
         /** @brief BLE device information. */
         std::string mBleMacAddress;
 
@@ -278,9 +290,10 @@ class MQTTClient {
         gsm_section_mesh_uplink_state_struct_t mMeshUplinkState;
 #endif
 
+#if AP
         /** @brief Onboarding global state. */
-        //gsm_section_onboarding_global_state_struct_t mOnboardingGlobalState;
-
+        gsm_section_onboarding_global_state_struct_t mOnboardingGlobalState;
+#endif // #if AP
         /** @brief Onboarding URL. */
         std::string mOnboardingUrl;
 
@@ -406,10 +419,6 @@ class MQTTClient {
          * @param[in] duration Time to receive the MQTT ack.
          */
         void UpdateMqttAckTime(std::chrono::duration<double> duration);
-
-        /**
-         *  TODO:Benoit  Initiliaze MQTT Client parameters and Tls/Socket
-        */            
 
         virtual lwmqtt_err_t ConnectingToBroker(int *fd) = 0;
 

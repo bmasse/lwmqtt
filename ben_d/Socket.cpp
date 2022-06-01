@@ -1,4 +1,3 @@
-#include "config.h"
 #include "Socket.h"
 
 #include <cstring>
@@ -40,7 +39,12 @@ void Socket::Close()
 {
     if (mSock != INVALID_SOCKET)
     {
+        GLTRACE_MQTTCLIENT("Close mSock:  %d", mSock);
         close(mSock);
+    }
+    else
+    {
+        GLTRACE_MQTTCLIENT("Closing invalid socket:");
     }
     mSock = INVALID_SOCKET;
     SetState(Unconnected);
@@ -63,11 +67,13 @@ bool Socket::SetSocketBlockingMode(BlockingMode_E mode)
 
 bool Socket::ForceBlocking()
 {
+    GLTRACE_MQTTCLIENT("ForceBlocking:");
     return SetSocketBlockingMode(BlockingMode_E::BlockingMode);
 }
 
 bool Socket::ForceNonBlocking()
 {
+    GLTRACE_MQTTCLIENT("ForceNonBlocking:");
     return SetSocketBlockingMode(BlockingMode_E::NonBlockingMode);
 }
 
@@ -149,6 +155,7 @@ Socket::Msg Socket::Connect()
     }
     if (mSock != INVALID_SOCKET)
     {
+        GLDEBUG_MQTTCLIENT("Open mSock:  %d", mSock);
         SetState(Connected);
         retVal = Err_InvalidSocket;
     }

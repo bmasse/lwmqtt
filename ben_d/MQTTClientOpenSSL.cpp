@@ -13,7 +13,7 @@ static lwmqtt_err_t lwqtt_read_callback_c_wrapper(void *ref, uint8_t *buffer, si
     return callback(buffer, len, sent, timeout, true);
 }
 
-static lwmqtt_err_t lwqtt_write_callback_c_wrapper(void *ref, uint8_t *buffer, size_t len, size_t *sent, uint32_t timeout)
+lwmqtt_err_t lwqtt_write_callback_c_wrapper(void *ref, uint8_t *buffer, size_t len, size_t *sent, uint32_t timeout)
 {
     auto &callback = *reinterpret_cast<lwmqttReadWriteCallbackFunc *>(ref);
     return callback(buffer, len, sent, timeout, false);
@@ -125,7 +125,7 @@ lwmqtt_err_t MQTTClientOpenSSL::ConnectingToBroker(int *fd)
     {
         retVal = LWMQTT_SUCCESS;
         mTlsData.socket = *fd = mSock.GetSocket();
-        if (mTls.Init() == TLS::Msg_Success)
+        if (mTls.Init() == OpenSSL_API::Msg_Success)
         {
             GLINFO_MQTTCLIENT("TLS Socket connected");
             retVal = LWMQTT_SUCCESS;
@@ -246,7 +246,7 @@ lwmqtt_err_t MQTTClientOpenSSL::NetworkPeek(size_t *available)
 #else
 lwmqtt_err_t MQTTClientOpenSSL::NetworkPeek(size_t *available)
 {
-    if (mTls.Peek(available) == TLS::Msg_Success)
+    if (mTls.Peek(available) == OpenSSL_API::Msg_Success)
     {
         return LWMQTT_SUCCESS;
     }
@@ -262,18 +262,18 @@ lwmqtt_err_t MQTTClientOpenSSL::ReadWrite(uint8_t *buffer, size_t len, size_t *r
 
 lwmqtt_err_t MQTTClientOpenSSL::Read(uint8_t *buffer, size_t len, size_t *read, uint32_t timeout)
 {
-    TLS::TlsMsg_E retVal;
+    OpenSSL_API::OpenSSL_API_Msg_E retVal;
     retVal = mTls.Read(buffer, len, read, timeout);
-    if (retVal == TLS::Msg_Success)
+    if (retVal == OpenSSL_API::Msg_Success)
         return LWMQTT_SUCCESS;
     return LWMQTT_NETWORK_FAILED_READ;
 }
 
 lwmqtt_err_t MQTTClientOpenSSL::Write(uint8_t *buffer, size_t len, size_t *sent, uint32_t timeout)
 {
-    TLS::TlsMsg_E retVal;
+    OpenSSL_API::OpenSSL_API_Msg_E retVal;
     retVal = mTls.Write(buffer, len, sent, timeout);
-    if (retVal == TLS::Msg_Success)
-        return LWMQTT_SUCCESS;
+    if (retVal == OpenSSL_API::Msg_Success)
+       return LWMQTT_SUCCESS;
     return LWMQTT_NETWORK_FAILED_WRITE;
 }

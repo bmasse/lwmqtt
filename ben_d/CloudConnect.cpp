@@ -1,8 +1,9 @@
 #include <iostream>
 #include <cassert>
 #include <chrono>
-
-
+#if AP
+#include <aruba/util/grouplog_cloudconnect.h>
+#endif // #if AP
 #include "CloudConnect.h"
 #include "config.h"
 
@@ -16,8 +17,18 @@ CloudConnect::CloudConnect(ev::loop_ref loop,
                            std::string deviceKeyPath="/tmp/device.key",
                            std::string caCert="/aruba/conf/AmazonRootCA.pem",
                            std::string onboardingCACert="./ca/smb_ca_certificate.pem",
+#if AP
+                           int websocketServerPort=8080,
+                           int syslogServerPort=-1,
+#endif // #if AP					   						   
                            bool forceMqttConnStart=false)
     : mLoop(loop),
+#if AP
+    , mWebSocketServer(mLoop,
+                       websocketServerPort,
+                       { TELEMETRY_WS_PROTOCOL, CONFIG_WS_PROTOCOL, LUAD_SCRIPT_WS_PROTOCOL },
+                       MAX_WS_BUFFER_SIZE),
+#endif // #if AP					   						   
       mMQTTClient(mqttHost,
                   mqttHostPort,
                   validateMqttHostCert,
@@ -99,6 +110,10 @@ CloudConnect::CloudConnect(ev::loop_ref loop,
     // Setup the timer used to reset all connections.
     mResetAllConnectionsTimer.set<CloudConnect, &CloudConnect::ResetAllConnectionsTimerCallback>(this);
 #if AP
+    // Setup signals handling.
+    mSignalReconnectWatcher.set<CloudConnect, &CloudConnect::HandleSignalCallback>(this);
+    mSignalReconnectWatcher.start(SIGHUP);
+
     // Starts components.
     mWebSocketServer.Start();
 #endif // #if AP
@@ -258,6 +273,8 @@ void CloudConnect::HandleWsClientMessage(int clientID, const string& protocol, c
                     protocol.c_str());
 
     if (protocol == LUAD_SCRIPT_WS_PROTOCOL) {
+        std::string mqttTopicSuffix;
+
         internal_messages::LuadScriptMessage luaScriptMessage;
         if (!luaScriptMessage.ParseFromArray(message.data(), message.size())) {
             GLERROR_DEFAULT("LuadScriptMessage message could not be parsed!");
@@ -279,13 +296,28 @@ void CloudConnect::HandleWsClientMessage(int clientID, const string& protocol, c
             messageTag = luaScriptMessage.payload_type();
         }
 
+        if (luaScriptMessage.has_mqtt_topic_suffix()) {
+            mqttTopicSuffix = luaScriptMessage.mqtt_topic_suffix();
+        }
+        else {
+            mqttTopicSuffix = "script/" + luaScriptMessage.script_id();
+        }
+
         std::vector<byte> payload(luaScriptMessage.payload().cbegin(), luaScriptMessage.payload().cend());
-        mMQTTClient.SendMessage("script/" + luaScriptMessage.script_id(), payload, messageTag);
+        mMQTTClient.SendMessage(mqttTopicSuffix, payload, messageTag);
         return;
     }
 
     GLDEBUG_DEFAULT("Forwarding message from WebSocket client (ID %d) on MQTT connection.",
              clientID);
     mMQTTClient.SendMessage("devconf", message, "");
+}
+
+void CloudConnect::HandleSignalCallback(ev::sig &signal, int revents)
+{
+    if (signal.signum == SIGHUP) {
+        GLINFO_DEFAULT("MQTT reconnect requested.");
+        RequestConnectionsReset();
+    }
 }
 #endif // #if AP

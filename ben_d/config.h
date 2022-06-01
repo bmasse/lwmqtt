@@ -34,6 +34,7 @@ enum DBLogLevel {
 #define GLERROR_MQTTCLIENT BLog
 #define GLDEBUG_MQTTCLIENT BLog
 #define GLINFO_MQTTCLIENT BLog
+#define GLTRACE_MQTTCLIENT BLog
 
 #define GLERROR_LWMQTT BLog
 

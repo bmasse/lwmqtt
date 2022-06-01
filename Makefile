@@ -433,32 +433,32 @@ ben_d/MQTTClientTLS.cpp.s:
 	$(MAKE) -f CMakeFiles/ben.dir/build.make CMakeFiles/ben.dir/ben_d/MQTTClientTLS.cpp.s
 .PHONY : ben_d/MQTTClientTLS.cpp.s
 
-ben_d/SSLConnection.o: ben_d/SSLConnection.cpp.o
+ben_d/OpenSSL_API.o: ben_d/OpenSSL_API.cpp.o
 
-.PHONY : ben_d/SSLConnection.o
+.PHONY : ben_d/OpenSSL_API.o
 
 # target to build an object file
-ben_d/SSLConnection.cpp.o:
-	$(MAKE) -f CMakeFiles/ben.dir/build.make CMakeFiles/ben.dir/ben_d/SSLConnection.cpp.o
-.PHONY : ben_d/SSLConnection.cpp.o
+ben_d/OpenSSL_API.cpp.o:
+	$(MAKE) -f CMakeFiles/ben.dir/build.make CMakeFiles/ben.dir/ben_d/OpenSSL_API.cpp.o
+.PHONY : ben_d/OpenSSL_API.cpp.o
 
-ben_d/SSLConnection.i: ben_d/SSLConnection.cpp.i
+ben_d/OpenSSL_API.i: ben_d/OpenSSL_API.cpp.i
 
-.PHONY : ben_d/SSLConnection.i
+.PHONY : ben_d/OpenSSL_API.i
 
 # target to preprocess a source file
-ben_d/SSLConnection.cpp.i:
-	$(MAKE) -f CMakeFiles/ben.dir/build.make CMakeFiles/ben.dir/ben_d/SSLConnection.cpp.i
-.PHONY : ben_d/SSLConnection.cpp.i
+ben_d/OpenSSL_API.cpp.i:
+	$(MAKE) -f CMakeFiles/ben.dir/build.make CMakeFiles/ben.dir/ben_d/OpenSSL_API.cpp.i
+.PHONY : ben_d/OpenSSL_API.cpp.i
 
-ben_d/SSLConnection.s: ben_d/SSLConnection.cpp.s
+ben_d/OpenSSL_API.s: ben_d/OpenSSL_API.cpp.s
 
-.PHONY : ben_d/SSLConnection.s
+.PHONY : ben_d/OpenSSL_API.s
 
 # target to generate assembly for a file
-ben_d/SSLConnection.cpp.s:
-	$(MAKE) -f CMakeFiles/ben.dir/build.make CMakeFiles/ben.dir/ben_d/SSLConnection.cpp.s
-.PHONY : ben_d/SSLConnection.cpp.s
+ben_d/OpenSSL_API.cpp.s:
+	$(MAKE) -f CMakeFiles/ben.dir/build.make CMakeFiles/ben.dir/ben_d/OpenSSL_API.cpp.s
+.PHONY : ben_d/OpenSSL_API.cpp.s
 
 ben_d/Socket.o: ben_d/Socket.cpp.o
 
@@ -1025,9 +1025,9 @@ help:
 	@echo "... ben_d/MQTTClientTLS.o"
 	@echo "... ben_d/MQTTClientTLS.i"
 	@echo "... ben_d/MQTTClientTLS.s"
-	@echo "... ben_d/SSLConnection.o"
-	@echo "... ben_d/SSLConnection.i"
-	@echo "... ben_d/SSLConnection.s"
+	@echo "... ben_d/OpenSSL_API.o"
+	@echo "... ben_d/OpenSSL_API.i"
+	@echo "... ben_d/OpenSSL_API.s"
 	@echo "... ben_d/Socket.o"
 	@echo "... ben_d/Socket.i"
 	@echo "... ben_d/Socket.s"

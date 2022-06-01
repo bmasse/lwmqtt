@@ -1,5 +1,5 @@
-#ifndef __SSLConnection_h__
-#define __SSLConnection_h__
+#ifndef __OpenSSL_API_h__
+#define __OpenSSL_API_h__
 
 #include <functional>
 
@@ -47,12 +47,12 @@ extern "C"
 
 } // extern "C" {
 
-typedef std::function<int(int preverify_ok, X509_STORE_CTX *ctx)> serverCertificateVeriryCallbackFunc;
+typedef std::function<int(int preverify_ok, X509_STORE_CTX *ctx)> serverCertificateVerifyCallbackFunc;
 
-class TLS
+class OpenSSL_API
 {
 public:
-    enum TlsMsg_E
+    enum OpenSSL_API_Msg_E
     {
         Msg_Err_Read = -5,
         Msg_Err_Write = -4,
@@ -61,8 +61,8 @@ public:
         Msg_Error = -1,
         Msg_Success = 0
     };
-    TLS(TlsData_S *data);
-    ~TLS() { Close(); };
+    OpenSSL_API(TlsData_S *data);
+    ~OpenSSL_API() { Close(); };
 
     int Init();
 
@@ -70,11 +70,9 @@ public:
     SSL *GetSsl() { return m_ssl; }
     SSL *m_ssl;
     void Close();
-    TlsMsg_E Read(uint8_t *buffer, size_t len, size_t *read, uint32_t timeout);
-    TlsMsg_E Write(uint8_t *buffer, size_t len, size_t *read, uint32_t timeout);
-    TlsMsg_E Peek(size_t *available);
-    int HandleSslError(int ret);
-    void PrintSslError(int err);
+    OpenSSL_API_Msg_E Read(uint8_t *buffer, size_t len, size_t *read, uint32_t timeout);
+    OpenSSL_API_Msg_E Write(uint8_t *buffer, size_t len, size_t *read, uint32_t timeout);
+    OpenSSL_API_Msg_E Peek(size_t *available);
 
 private:
     int InitSslCtx();
@@ -93,9 +91,11 @@ private:
     int ServerCertificateVerifyCallback(int preverify_ok, X509_STORE_CTX *ctx);
     int CertificateHostNameVeriry(X509 *cert, const char *hostname);
     bool WildcardName(char *certname, const char *hostname);
+    bool HandleSslError(int ret);
+    void PrintSslError(int err);
 
-    TlsMsg_E SSL_Pending(size_t *available);
-    TlsMsg_E GetFionRead(size_t *available);
+    OpenSSL_API_Msg_E SSL_Pending(size_t *available);
+    OpenSSL_API_Msg_E GetFionRead(size_t *available);
 
     TlsData_S *m_tls_data;
 
@@ -108,10 +108,9 @@ private:
     // Init or Not
     bool m_initialized;
 
-    bool m_want_write;
     bool m_want_connect;
 
-    serverCertificateVeriryCallbackFunc mServerCertificateVeriryCallbackFunc;
+    serverCertificateVerifyCallbackFunc mServerCertificateVerifyCallbackFunc;
 };
 
 extern "C"
@@ -121,4 +120,4 @@ extern "C"
 
 } // extern "C"
 
-#endif // #ifndef __SSLConnection_h__
+#endif // #ifndef __OpenSSL_API_h__

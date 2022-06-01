@@ -1,0 +1,42 @@
+En date du 2022 juin 6, avant le synchro avec cloudconnect.
+
+1.0 Synch avec ap_gsm
+1.1 LWQTT branch et compile
+1.2 Fonctionne bien
+
+
+/******************************************************************************
+    1.0 Synch avec ap_gsm
+ ******************************************************************************/
+
+Synchronisé avec ap_gsm 
+masseb@bm002:/work/adu/views/bm002-00/cloudconnect/src$ adu changes -m 10 //depot/margot/ap-gsm/...#have
+Change 814988 on 2022/05/30 by mathieum@smb-ca7 'Unit Test Cases Executed: Manua'
+Change 814891 on 2022/05/27 by hokuochan@hokuochan-ap-gsm-merge 'Unit Test Cases Executed: Verif'
+Change 814876 on 2022/05/27 by hokuochan@hokuochan-ap-gsm-merge 'Unit Test Cases Executed: Revis'
+Change 814787 on 2022/05/26 by hokuochan@hokuochan-ap-gsm-merge 'Unit Test Cases Executed: Verif'
+Change 814757 on 2022/05/26 by hokuochan@hokuochan-ap-gsm-merge 'Unit Test Cases Executed: Verif'
+Change 814739 on 2022/05/26 by jlesage@ap-gsm-jls 'Unit Test Cases Executed: manua'
+Change 814736 on 2022/05/26 by jlesage@ap-gsm-jls 'Unit Test Cases Executed: manua'
+Change 814672 on 2022/05/25 by hokuochan@hokuochan-ap-gsm-merge 'Unit Test Cases Executed: Broug'
+Change 814557 on 2022/05/24 by jlesage@ap-gsm-jls 'Affects Bug: none Unit Test Cas'
+Change 814510 on 2022/05/24 by jlesage@ap-gsm-jls 'Unit Test Cases Executed: manua
+
+/******************************************************************************
+    1.1 LWQTT branch et compile
+ ******************************************************************************/
+
+make
+
+
+CMakeLists.txt a été modifié
+
+
+
+/******************************************************************************
+    1.2 Fonctionne bien
+ ******************************************************************************/
+
+
+Fonctionne bien, seule différence notable a priori, quand on déconnecte du côté 
+serveur, le programme se termine.

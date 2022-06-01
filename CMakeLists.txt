@@ -65,7 +65,7 @@ set(TEST_FILES
         ben_d/MQTTClient.cpp
         ben_d/CloudConnect.cpp
         ben_d/Socket.cpp
-        ben_d/SSLConnection.cpp
+        ben_d/OpenSSL_API.cpp
         ben_d/main.cpp
         ben_d/mainAruba.cpp
         ben_d/MQTTClientOpenSSL.cpp
